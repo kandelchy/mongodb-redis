@@ -1,49 +1,52 @@
 class PeopleController < ApplicationController
   require "redis"
-  
+
   def index
     @people = Person.all
   end
 
   def new
     @person = Person.new
-    $redis.set("test_key", "redes with mongoidd!")
+
 
 
   end
 
   def create
-    @person = Person.new(person_params)
 
-    if @person.save
-
-      redirect_to root_path, notice: "The person has been created!" and return
+    data = (0..100).map do |i|
+      { :a =>"this message num#{i}"   }
     end
-    render 'new'
+    $redis.set(:key , data)
+
+    redis_value = $redis.get(:key)
+    pp "----------------------------------------"
+
+    pp redis_value
+
+
+   #@person = Person.create(message:redis_value)
+
+   @person = Person.new(message:redis_value)
+
+     if @person.save
+
+       redirect_to root_path, notice: "The message has been save from redis to mongodb" and return
+     end
+  # if @person.save
+  #redirect_to root_path, notice: " has been updated! from redis" and return
+   #end
+
+
+
+
+
+
   end
 
-  def edit
-    @person = Person.find(params[:id])
-  end
 
-  def update
-    @person = Person.find(params[:id])
 
-    if @person.update_attributes(person_params)
-      redirect_to root_path, notice: "#{@person.first_name} #{@person.last_name} has been updated!" and return
-    end
-
-    render 'edit'
-  end
-
-  def destroy
-    @person = Person.find(params[:id])
-    @person.destroy
-
-    redirect_to root_path, notice: "#{@person.first_name} #{@person.last_name} has been deleted!" and return
-  end
-private
   def person_params
-    params.require(:person).permit(:first_name, :last_name, :email, :notes)
+    params.require(:person).permit(:message,:redis_value)
   end
 end
