@@ -10,30 +10,33 @@ class PeopleController < ApplicationController
   end
 
   def create
-    @person = Person.new(person_params)
-    # Make sure at least one slave is up and running beside Master`
-     while $REDIS.wait(2,1000) == 0
+    # @person = Person.new(person_params)
+    message_text = "Testing Redis and MongoDB, message No. "
+    1000000.times do
+      # Make sure at least one slave is up and running beside Master`
+      while $REDIS.wait(2,1000) == 0
        puts "Waiting for Slave"
        sleep 10
-     end
+      end
 
-     $messageno=$messageno+1
-    #  puts $messageno
-    #  puts @person.message
-     puts $REDIS.set("Message: #{$messageno}", @person.message )
+      $messageno=$messageno+1
+      #  puts $messageno
+      #  puts @person.message
+      # puts $REDIS.set("Message: #{$messageno}", @person.message )
+      $REDIS.set("Message: #{$messageno}", "#{message_text} #{$messageno}" )
 
-     redis_value = $REDIS.get("Message: #{$messageno}")
-     pp "----------------------------------------"
+      redis_value = $REDIS.get("Message: #{$messageno}")
+      # pp "----------------------------------------"
+      #
+      # pp redis_value
 
-     pp redis_value
 
-
-     @person = Person.new(message:redis_value)
-
-     if @person.save
-       redirect_to root_path, notice: "The message has been saved from redis to mongodb" and return
-     end
-
+      @person = Person.new(message:redis_value)
+      @person.save
+      # if @person.save
+      #  redirect_to root_path, notice: "The message has been saved from redis to mongodb" and return
+      # end
+    end
 
      # data = (0..100).map do |i|
      #   { :a =>"this message num#{i}"   }
