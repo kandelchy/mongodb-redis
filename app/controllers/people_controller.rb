@@ -11,32 +11,66 @@ class PeopleController < ApplicationController
 
   def create
     # @person = Person.new(person_params)
+
     message_text = "Testing Redis and MongoDB, message No. "
+    log = Logger.new('mylog.log')
+    log.info 'Log file for succeeded and failed message of the performance test for 1 million messages'
+    success=0
+    failed=0
+    time_diff=0
+    min_response = 1
+    max_response = 0
+    total_time = 0
+    avg_response = 0
     1000000.times do
-      # Make sure at least one slave is up and running beside Master`
-      while $REDIS.wait(2,1000) == 0
-       puts "Waiting for Slave"
-       sleep 10
+      begin
+        start_time = Time.now
+        # Make sure at least one slave is up and running beside Master`
+        while $REDIS.wait(2,1000) == 0
+          log.info 'Message failed'
+          log.error e
+          failed = failed + 1
+          puts "Waiting for Slave"
+          sleep 10
+        end
+
+        $messageno = $messageno + 1
+
+        $REDIS.set("Message: #{$messageno}", "#{message_text} #{$messageno}" )
+        redis_value = $REDIS.get("Message: #{$messageno}")
+        @person = Person.new(message:redis_value)
+        @person.save
+
+        success=success+1
+        current_time = Time.now
+        time_diff = Time.now - start_time
+        if time_diff < min_response
+          min_response = time_diff
+        end
+        if time_diff > max_response
+          max_response = time_diff
+        end
+        total_time = total_time + time_diff
+        log.info "Message success, Time= #{time_diff}"
+        # puts "Time= #{time_diff}"
+        # put Time.at(time_diff.to_i.abs).utc.strftime "%H:%M:%S"
+
+      rescue Exception => e
+        # puts "failed?", e
+        log.info 'Message failed'
+        log.error e
+        failed = failed + 1
       end
 
-      $messageno=$messageno+1
-      #  puts $messageno
-      #  puts @person.message
-      # puts $REDIS.set("Message: #{$messageno}", @person.message )
-      $REDIS.set("Message: #{$messageno}", "#{message_text} #{$messageno}" )
-
-      redis_value = $REDIS.get("Message: #{$messageno}")
-      # pp "----------------------------------------"
-      #
-      # pp redis_value
-
-
-      @person = Person.new(message:redis_value)
-      @person.save
-      # if @person.save
-      #  redirect_to root_path, notice: "The message has been saved from redis to mongodb" and return
-      # end
     end
+    avg_response = total_time / 1000000
+    puts "Message succeeded: #{success}"
+    puts "Message failed: #{failed}"
+    puts "Minimum time response: #{min_response}"
+    puts "Maximum time response: #{max_response}"
+    puts "Average time reponse: #{avg_response}"
+    redirect_to root_path, notice: "Messages have been saved from redis to mongodb" and return
+end
 
      # data = (0..100).map do |i|
      #   { :a =>"this message num#{i}"   }
@@ -64,7 +98,7 @@ class PeopleController < ApplicationController
   #      format.json { render json: @person.errors, status: :unprocessable_entity }
   #    end
   #  end
- end
+
 
   def person_params
     params.require(:person).permit(:message,:redis_value)
