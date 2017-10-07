@@ -52,8 +52,6 @@ class PeopleController < ApplicationController
         end
         total_time = total_time + time_diff
         log.info "Message success, Time= #{time_diff}"
-        # puts "Time= #{time_diff}"
-        # put Time.at(time_diff.to_i.abs).utc.strftime "%H:%M:%S"
 
       rescue Exception => e
         # puts "failed?", e
@@ -63,7 +61,7 @@ class PeopleController < ApplicationController
       end
 
     end
-    avg_response = total_time / 1000000
+    avg_response = total_time / 1000000  #Change this to number of messages you are running
     puts "Message succeeded: #{success}"
     puts "Message failed: #{failed}"
     puts "Minimum time response: #{min_response}"
