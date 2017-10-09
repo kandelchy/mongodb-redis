@@ -27,8 +27,8 @@ class PeopleController < ApplicationController
         start_time = Time.now
         # Make sure at least one slave is up and running beside Master`
         while $REDIS.wait(2,1000) == 0
-          log.info 'Message failed'
-          log.error e
+          log.info 'Message failed, No slaves available'
+          # log.error e
           failed = failed + 1
           puts "Waiting for Slave"
           sleep 10
@@ -51,13 +51,13 @@ class PeopleController < ApplicationController
           max_response = time_diff
         end
         total_time = total_time + time_diff
-        log.info "Message success, Time= #{time_diff}"
+        log.info "Message success, No. #{$messageno} Time= #{time_diff}"
 
       rescue Exception => e
-        # puts "failed?", e
-        log.info 'Message failed'
-        log.error e
+        log.info 'Message failed, connection lost'
+        # log.error e
         failed = failed + 1
+        sleep 10
       end
 
     end
@@ -70,32 +70,6 @@ class PeopleController < ApplicationController
     redirect_to root_path, notice: "Messages have been saved from redis to mongodb" and return
 end
 
-     # data = (0..100).map do |i|
-     #   { :a =>"this message num#{i}"   }
-     # end
-     # $redis.set(:key , data)
-
-
-
-    #@person = Person.create(message:redis_value)
-
-
-   # if @person.save
-   #redirect_to root_path, notice: " has been updated! from redis" and return
-    #end
-
-
-
-
-  #  respond_to do |format|
-  #    if @person.save
-  #      format.html { redirect_to @person, notice: 'Upload was successfully created.' }
-  #      format.json { render :show, status: :created, location: @person }
-  #    else
-  #      format.html { render :new }
-  #      format.json { render json: @person.errors, status: :unprocessable_entity }
-  #    end
-  #  end
 
 
   def person_params
