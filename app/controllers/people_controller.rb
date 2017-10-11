@@ -12,7 +12,7 @@ class PeopleController < ApplicationController
   def create
     # @person = Person.new(person_params)
 
-    message_text = "Testing Redis and MongoDB, message No. "
+    message_text = 'Testing Redis and MongoDB, message No. '
     log = Logger.new('mylog.log')
     log.info 'Log file for succeeded and failed message of the performance test for 1 million messages'
     success=0
@@ -22,52 +22,69 @@ class PeopleController < ApplicationController
     max_response = 0
     total_time = 0
     avg_response = 0
-    1000000.times do
+    5000.times do
       begin
         start_time = Time.now
         # Make sure at least one slave is up and running beside Master`
+        puts "No of slaves is: #{$REDIS.wait(2,1000)}"
         while $REDIS.wait(2,1000) == 0
           log.info 'Message failed, No slaves available'
           # log.error e
           failed = failed + 1
-          puts "Waiting for Slave"
+          puts 'Waiting for Slave'
           sleep 10
         end
-
         $messageno = $messageno + 1
-
-        $REDIS.set("Message: #{$messageno}", "#{message_text} #{$messageno}" )
-        redis_value = $REDIS.get("Message: #{$messageno}")
-        @person = Person.new(message:redis_value)
-        @person.save
-
-        success=success+1
-        current_time = Time.now
-        time_diff = Time.now - start_time
-        if time_diff < min_response
-          min_response = time_diff
+        # $REDIS.set("Message: #{$messageno}", "#{message_text} #{$messageno}" )
+        redis_resp = $REDIS.set("Message: #{$messageno}", "#{message_text} #{$messageno}" )
+        # puts redis_resp
+        if redis_resp != 'OK'
+          log.info 'Message NOT saved to REDIS'
+          puts 'REDIS not available, NO SET'
+        else
+          redis_value = $REDIS.get("Message: #{$messageno}")
+          puts redis_value
+          if redis_value == nil
+            log.info 'Message NOT loaded from REDIS'
+            puts 'REDIS not available, NO GET'
+          else
+            @person = Person.new(message:redis_value)
+            @person.save
+            success=success+1
+            current_time = Time.now
+            time_diff = Time.now - start_time
+            if time_diff < min_response
+              min_response = time_diff
+            end
+            if time_diff > max_response
+              max_response = time_diff
+            end
+            total_time = total_time + time_diff
+            log.info "Message success, No. #{$messageno} Time= #{time_diff}"
+            puts 'MESSAGE saved'
+          end
         end
-        if time_diff > max_response
-          max_response = time_diff
-        end
-        total_time = total_time + time_diff
-        log.info "Message success, No. #{$messageno} Time= #{time_diff}"
-
       rescue Exception => e
         log.info 'Message failed, connection lost'
         # log.error e
         failed = failed + 1
         sleep 10
-      end
+        # Resend message
+        redis_resp = $REDIS.set("Message: #{$messageno}", "REVISED: #{message_text} #{$messageno}" )
+        redis_value = $REDIS.get("Message: #{$messageno}")
+        @person = Person.new(message:redis_value)
+        @person.save
+        $messageno = $messageno + 1
 
+      end
     end
-    avg_response = total_time / 1000000  #Change this to number of messages you are running
+    avg_response = total_time / 5000  #Change this to number of messages you are running
     puts "Message succeeded: #{success}"
     puts "Message failed: #{failed}"
     puts "Minimum time response: #{min_response}"
     puts "Maximum time response: #{max_response}"
     puts "Average time reponse: #{avg_response}"
-    redirect_to root_path, notice: "Messages have been saved from redis to mongodb" and return
+    redirect_to root_path, notice: 'Messages have been saved from redis to mongodb' and return
 end
 
 
