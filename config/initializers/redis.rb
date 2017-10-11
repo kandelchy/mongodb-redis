@@ -11,4 +11,3 @@ redis_options = {
 
 $REDIS = Redis.new(redis_options)
 $messageno=0
-# puts $REDIS.set("number","***********SENDING MESSAGE No. #{$messageno} *********")
